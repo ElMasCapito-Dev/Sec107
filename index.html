@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sec.107 IA</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #F9F9F9; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        header { background-color: #800020; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; }
+        #chat { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 85%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; line-height: 1.4; }
+        .user-msg { background-color: #E0E0E0; color: #333; align-self: flex-end; border-bottom-right-radius: 0; }
+        .bot-msg { background-color: white; color: #333; align-self: flex-start; border-bottom-left-radius: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #800020; }
+        .admin-msg { background-color: #FFF3CD; color: #856404; border-left: 4px solid #FFD700; align-self: flex-start; border-bottom-left-radius: 0; }
+        footer { display: flex; padding: 10px; background-color: white; border-top: 1px solid #ddd; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; font-size: 1rem; }
+        button { background-color: #800020; color: white; border: none; padding: 10px 15px; margin-left: 10px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span>Sec.107 IA</span>
+    <button id="reset-btn" style="padding: 5px 10px; font-size: 0.8rem;">+ Chat</button>
+</header>
+
+<div id="chat">
+    <div class="message bot-msg">¡Hola! Soy tu asistente virtual. Escribe abajo y presiona Enter.</div>
+</div>
+
+<footer>
+    <input type="text" id="user-input" placeholder="Escribe un mensaje...">
+    <button id="send-btn">➤</button>
+    <button id="img-btn" style="background-color: #FF9800;">🎨</button>
+</footer>
+
+<script>
+    const chatBox = document.getElementById('chat');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const imgBtn = document.getElementById('img-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    const GROQ_API_KEY = "PEGA_AQUI_TU_CLAVE_DE_GROQ"; // <-- PON TU CLAVE AQUÍ
+    const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+    
+    let historial = [
+        { role: "system", content: "Tu nombre es Sec.107 IA. Fuiste creada por ElmasCalvito. Responde de forma sencilla. Escribe operaciones con texto normal." }
+    ];
+    let esAdmin = false;
+
+    function addMessage(text, className) {
+        const div = document.createElement('div');
+        div.className = `message ${className}`;
+        div.innerHTML = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    sendBtn.onclick = async () => {
+        const text = userInput.value.trim();
+        if (!text) return;
+        userInput.value = "";
+        addMessage(`<strong>Tú:</strong><br>${text}`, 'user-msg');
+
+        if (text === "LIAGOODD6767107") {
+            esAdmin = true;
+            addMessage(`<strong>Sistema:</strong><br>👑 Clave maestra aceptada. Bienvenido, ElmasCalvito.`, 'admin-msg');
+            return;
+        }
+
+        if (text.startsWith("/")) {
+            if (!esAdmin) {
+                addMessage(`<strong>Sistema:</strong><br>⛔ Acceso denegado.`, 'admin-msg');
+                return;
+            }
+            if (text.startsWith("/anuncio ")) {
+                addMessage(`<strong>📢 TRANSMISIÓN GLOBAL:</strong><br>${text.replace("/anuncio ", "")}`, 'admin-msg');
+                return;
+            }
+        }
+
+        historial.push({ role: "user", content: text });
+        addMessage(`<em>Pensando...</em>`, 'bot-msg');
+        const loadingMsg = chatBox.lastChild;
+
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: "openai/gpt-oss-120b",
+                    messages: historial,
+                    temperature: 0.5
+                })
+            });
+            const data = await res.json();
+            const texto = data.choices[0].message.content;
+            loadingMsg.innerHTML = `<strong>🤖 Sec.107 IA:</strong><br>${texto}`;
+            historial.push({ role: "assistant", content: texto });
+        } catch (e) {
+            loadingMsg.innerHTML = `<strong>Sistema:</strong><br>Error de conexión.`;
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    userInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendBtn.click(); });
+
+    imgBtn.onclick = () => {
+        if (!esAdmin) {
+            addMessage(`<strong>Sistema:</strong><br>⛔ Solo el Administrador puede generar imágenes.`, 'admin-msg');
+            return;
+        }
+        const prompt = userInput.value.trim();
+        if (!prompt) return alert("Escribe qué quieres dibujar");
+        
+        userInput.value = "";
+        addMessage(`<strong>Tú:</strong><br>[Generando imagen: ${prompt}]`, 'user-msg');
+        
+        const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+        addMessage(`<strong>🤖 Sec.107 IA:</strong><br>Aquí tienes tu imagen:<br><img src="${imgUrl}" alt="${prompt}">`, 'bot-msg');
+    };
+
+    resetBtn.onclick = () => {
+        chatBox.innerHTML = '<div class="message bot-msg">¡Hola! Soy tu asistente virtual. Escribe abajo y presiona Enter.</div>';
+        historial = [historial[0]];
+    };
+</script>
+
+</body>
+</html>
